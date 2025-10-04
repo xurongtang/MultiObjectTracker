@@ -1,0 +1,1 @@
+yolo predict task=detect model=yolo12n.onnx imgsz=640 source=test.jpeg device='cpu'

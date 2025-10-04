@@ -1,0 +1,11 @@
+mkdir build && cd build
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=../../mnn-install \
+  -DMNN_BUILD_SHARED_LIBS=OFF \
+  -DMNN_BUILD_DEMO=OFF \
+  -DMNN_BUILD_TOOLS=OFF \
+  -DMNN_BUILD_BENCHMARK=OFF
+
+make -j$(nproc)
+make install

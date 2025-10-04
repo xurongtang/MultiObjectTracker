@@ -1,0 +1,33 @@
+cd ./opencv
+mkdir -p build && cd build
+
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=../../opencv-install \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DBUILD_opencv_apps=OFF \
+  -DBUILD_opencv_python=OFF \
+  -DBUILD_TESTS=OFF \
+  -DBUILD_PERF_TESTS=OFF \
+  -DBUILD_EXAMPLES=OFF \
+  \
+  # === 关键：禁用外部图像库依赖 ===
+  -DWITH_JPEG=ON \
+  -DWITH_PNG=ON \
+  -DWITH_TIFF=OFF \
+  -DWITH_OPENJPEG=OFF \        # 👈 关闭 OpenJPEG
+  -DWITH_JASPER=OFF \          # 👈 关闭 Jasper (另一个 JPEG2000 实现)
+  -DWITH_WEBP=OFF \
+  -DWITH_OPENEXR=OFF \
+  -DWITH_GDAL=OFF \
+  -DWITH_EIGEN=OFF \           # 你有自己的 Eigen，避免冲突
+  \
+  # 使用内置的 3rdparty（如 libjpeg-turbo, libpng）
+  -DBUILD_JPEG=ON \
+  -DBUILD_PNG=ON \
+  -DBUILD_ZLIB=ON \
+  -DBUILD_TIFF=OFF \
+  -DBUILD_OPENJPEG=OFF
+
+make -j$(nproc)
+make install

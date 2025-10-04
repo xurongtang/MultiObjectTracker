@@ -1,0 +1,5 @@
+DeepSORT/
+classic_deepsort/
+build/
+docker_image/
+.vscode/
