@@ -10,4 +10,4 @@ class DeepSortTracker
 
     private:
         void calculate_iou();
-}
+};
