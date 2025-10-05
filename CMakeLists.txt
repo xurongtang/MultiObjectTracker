@@ -12,8 +12,8 @@ set(EIGEN3_INCLUDE_DIR ${THIRD_PARTY_DIR}/eigen)
 add_library(eigen INTERFACE)
 target_include_directories(eigen INTERFACE ${EIGEN3_INCLUDE_DIR})
 
-# =============== OpenCV ===============
-set(OpenCV_DIR ${THIRD_PARTY_DIR}/opencv-install/share/opencv4)
+# =============== OpenCV ===============    静态库
+set(OpenCV_DIR ${THIRD_PARTY_DIR}/opencv-install/lib/cmake/opencv4)
 find_package(OpenCV REQUIRED)
 
 # =============== MNN ===============
@@ -39,23 +39,31 @@ file(GLOB_RECURSE SRC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
 )
 
-# =============== 通用 include 路径：只需 src 根目录 ===============
-set(COMMON_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-# =============== 辅助函数：为测试源文件创建可执行程序 ===============
-function(add_test_executable TEST_SOURCE)
-    get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
-    add_executable(${TEST_NAME} ${TEST_SOURCE} ${SRC_FILES})
-    target_include_directories(${TEST_NAME} PRIVATE ${COMMON_INCLUDE_DIRS})
-    target_link_libraries(${TEST_NAME} PRIVATE
+# =============== 构建静态核心库 ===============
+add_library(mot_core STATIC ${SRC_FILES})
+target_include_directories(mot_core
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_link_libraries(mot_core
+    PUBLIC
         ${OpenCV_LIBS}
         mnn
         eigen
         onnxruntime
+)
+
+# =============== 可执行文件：强制静态链接 ===============
+function(add_test_executable TEST_SOURCE)
+    get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
+    add_executable(${TEST_NAME} ${TEST_SOURCE})
+    target_link_libraries(${TEST_NAME} PRIVATE
+        mot_core
+        -static-libstdc++
+        -static-libgcc
     )
 endfunction()
 
-# =============== 自动构建 test/ 下所有测试程序 ===============
+# =============== 构建所有测试程序 ===============
 file(GLOB TEST_SOURCES
     LIST_DIRECTORIES false
     CONFIGURE_DEPENDS

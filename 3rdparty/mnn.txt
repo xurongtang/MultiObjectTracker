@@ -1,11 +1,13 @@
 mkdir build && cd build
+
 cmake .. \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=../../mnn-install \
   -DMNN_BUILD_SHARED_LIBS=OFF \
   -DMNN_BUILD_DEMO=OFF \
-  -DMNN_BUILD_TOOLS=OFF \
-  -DMNN_BUILD_BENCHMARK=OFF
+  -DMNN_BUILD_BENCHMARK=OFF \
+  -DMNN_BUILD_TOOLS=ON \          # ← 启用 tools（包含 MNNConvert）
+  -DMNN_BUILD_CONVERTER=ON        # ← 关键！启用模型转换器
 
 make -j$(nproc)
 make install
