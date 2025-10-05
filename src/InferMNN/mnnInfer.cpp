@@ -4,8 +4,14 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 
-MNNInfer::MNNInfer(std::string modelPath) 
-    : m_modelPath(modelPath) {}
+MNNInfer::MNNInfer(std::string modelPath,float mean_[3],float std_[3])
+    : m_modelPath(modelPath) {
+        for(int i = 0; i < 3; i++)
+        {
+            mnn_mean[i] = mean_[i];
+            mnn_std[i] = std_[i];
+        }
+    }
 
 MNNInfer::~MNNInfer() {
     if (m_session) {
@@ -90,14 +96,10 @@ int MNNInfer::runInference(std::vector<cv::Mat> &inputs, std::vector<std::vector
     config.filterType = MNN::CV::BILINEAR;
     config.sourceFormat = MNN::CV::BGR;   // OpenCV 默认 BGR
     config.destFormat = MNN::CV::RGB;     // 模型需要 RGB
-    // 推理时需进行与训练模型一致的归一化方式
-    // ImageNet 统计值
-    float mean[3] = {0.485f * 255.0f, 0.456f * 255.0f, 0.406f * 255.0f}; // ≈ [123.675, 116.28, 103.53]
-    float std[3]  = {0.229f, 0.224f, 0.225f};
 
     for (int i = 0; i < 3; ++i) {
-        config.mean[i]   = mean[i];
-        config.normal[i] = 1.0f / (std[i] * 255.0f);
+        config.mean[i]   = mnn_mean[i];
+        config.normal[i] = 1.0f / (mnn_std[i] * 255.0f);
     }
     
     auto process = std::shared_ptr<MNN::CV::ImageProcess>(MNN::CV::ImageProcess::create(config));
@@ -125,6 +127,8 @@ int MNNInfer::runInference(std::vector<cv::Mat> &inputs, std::vector<std::vector
 
     // 获取并打印输出
     outputs.clear();
+    output_shapes.clear();
+    
     auto outputNames = m_net->getSessionOutputAll(m_session);
     // std::cout << "📤 Number of output tensors: " << outputNames.size() << std::endl;
 
@@ -134,6 +138,7 @@ int MNNInfer::runInference(std::vector<cv::Mat> &inputs, std::vector<std::vector
         
         // 打印输出形状
         auto outShape = outputTensor->shape();
+        output_shapes.push_back({name, outShape});
         size_t total = 1;
         // std::cout << "--- Output[" << name << "] ---\nShape: ";
         for (auto s : outShape) {
