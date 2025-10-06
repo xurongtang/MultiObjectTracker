@@ -1,3 +1,5 @@
+#ifndef DEEPSORTTRACKER_H
+#define DEEPSORTTRACKER_H
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -11,3 +13,5 @@ class DeepSortTracker
     private:
         void calculate_iou();
 };
+
+#endif
