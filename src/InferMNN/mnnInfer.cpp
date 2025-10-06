@@ -139,6 +139,9 @@ int MNNInfer::runInference(std::vector<cv::Mat> &inputs, std::vector<std::vector
         MNN::Tensor outputUser(outputTensor, MNN::Tensor::CAFFE);
         outputTensor->copyToHostTensor(&outputUser);
 
+        auto outShape = outputTensor->shape();
+        output_shapes.push_back({outName, outShape});
+
         size_t total = 1;
         for (auto s : outputTensor->shape()) 
             total *= s;
