@@ -100,6 +100,16 @@ void ONNXYoloDetector::detect(cv::Mat& frame, std::vector<detect_result>& result
 
     // 5. 后处理
     postprocess(outputTensorValues, frame.size(), results);
+
+    // 6. 类别过滤：只保留指定类别（例如只保留 "person"，classId = 0）
+    std::vector<int> target_classes = {2}; // COCO: 0=person, 2=car, etc.
+    results.erase(
+        std::remove_if(results.begin(), results.end(),
+            [&target_classes](const detect_result& det) {
+                return std::find(target_classes.begin(), target_classes.end(), det.classId) == target_classes.end();
+            }),
+        results.end()
+    );
 }
 
 void ONNXYoloDetector::postprocess(const std::vector<float>& outputTensorValues,

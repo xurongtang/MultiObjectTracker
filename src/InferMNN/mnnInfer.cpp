@@ -74,92 +74,76 @@ int MNNInfer::runInference(std::vector<cv::Mat> &inputs, std::vector<std::vector
     }
 
     auto shape = m_inputTensor->shape();
-    int batch = shape[0];
+    int model_batch = shape[0];   // 通常是 1
     int channel = shape[1];
     int height = shape[2];
     int width = shape[3];
 
-    // std::cout << "📊 Input image size: " << inputs[0].cols << " x " << inputs[0].rows << std::endl;
-    // std::cout << "📊 Model expects: " << width << "x" << height << " (WxH)" << std::endl;
+    // std::cout << "📊 Model input shape: " << shape[0] << "x" << shape[1] 
+    //           << "x" << shape[2] << "x" << shape[3] << std::endl;
 
-    if (static_cast<int>(inputs.size()) > batch) {
-        std::cerr << "❌ Input batch size exceeds model capacity!" << std::endl;
+    // ✅ 关键修改：不要检查 batch size，而是循环处理每个输入
+    // 即使 model_batch=1，我们也逐个推理
+
+    outputs.clear();
+    output_shapes.clear();
+
+    // 获取输出 tensor 信息（假设单输出）
+    auto outputNames = m_net->getSessionOutputAll(m_session);
+    if (outputNames.empty()) {
+        std::cerr << "❌ No output tensor!" << std::endl;
         return -1;
     }
+    const std::string& outName = outputNames.begin()->first;
 
-    // ✅ 关键修复：使用 CAFFE (NCHW) 格式
-    MNN::Tensor inputUser(m_inputTensor, MNN::Tensor::CAFFE); // NCHW
-    auto inputPtr = inputUser.host<float>();
-
-    // 配置预处理（归一化到 [0,1]，BGR→RGB）
+    // 预处理配置
     MNN::CV::ImageProcess::Config config;
     config.filterType = MNN::CV::BILINEAR;
-    config.sourceFormat = MNN::CV::BGR;   // OpenCV 默认 BGR
-    config.destFormat = MNN::CV::RGB;     // 模型需要 RGB
-
+    config.sourceFormat = MNN::CV::BGR;
+    config.destFormat = MNN::CV::RGB;
     for (int i = 0; i < 3; ++i) {
         config.mean[i]   = mnn_mean[i];
         config.normal[i] = 1.0f / (mnn_std[i] * 255.0f);
     }
-    
     auto process = std::shared_ptr<MNN::CV::ImageProcess>(MNN::CV::ImageProcess::create(config));
 
+    // ✅ 逐个处理每个输入图像
     for (size_t i = 0; i < inputs.size(); ++i) {
         cv::Mat& img = inputs[i];
-        if (img.empty()) continue;
-
-        cv::Mat resized;
-        cv::resize(img, resized, cv::Size(width, height)); // 注意：Size(width, height)
-
-        // ✅ 关键：使用 CAFFE 格式，convert 会自动输出 NCHW
-        float* batchPtr = inputPtr + i * channel * height * width;
-        process->convert(
-            resized.data,    // BGR input
-            width, height,   // 输入宽高
-            width * 3,       // 输入 stride (BGR)
-            batchPtr,        // 输出指针 (NCHW)
-            width, height    // 输出尺寸
-        );
-    }
-
-    m_inputTensor->copyFromHostTensor(&inputUser);
-    m_net->runSession(m_session);
-
-    // 获取并打印输出
-    outputs.clear();
-    output_shapes.clear();
-    
-    auto outputNames = m_net->getSessionOutputAll(m_session);
-    // std::cout << "📤 Number of output tensors: " << outputNames.size() << std::endl;
-
-    for (const auto& pair : outputNames) {
-        const std::string& name = pair.first;
-        auto outputTensor = m_net->getSessionOutput(m_session, name.c_str());
-        
-        // 打印输出形状
-        auto outShape = outputTensor->shape();
-        output_shapes.push_back({name, outShape});
-        size_t total = 1;
-        // std::cout << "--- Output[" << name << "] ---\nShape: ";
-        for (auto s : outShape) {
-            // std::cout << s << " ";
-            total *= s;
+        if (img.empty()) {
+            // 空图：填充零特征
+            auto outTensor = m_net->getSessionOutput(m_session, outName.c_str());
+            size_t feat_dim = 1;
+            for (auto s : outTensor->shape()) feat_dim *= s;
+            outputs.push_back(std::vector<float>(feat_dim, 0.0f));
+            continue;
         }
-        // std::cout << "\nTotal elements: " << total << std::endl;
 
-        // 拷贝到 host
+        // 调整尺寸
+        cv::Mat resized;
+        cv::resize(img, resized, cv::Size(width, height)); // 注意：Size(宽, 高)
+
+        // 准备输入（NCHW，batch=1）
+        MNN::Tensor inputUser(m_inputTensor, MNN::Tensor::CAFFE);
+        process->convert(
+            resized.data, width, height, width * 3,
+            inputUser.host<float>(), width, height
+        );
+        m_inputTensor->copyFromHostTensor(&inputUser);
+
+        // 推理
+        m_net->runSession(m_session);
+
+        // 获取输出
+        auto outputTensor = m_net->getSessionOutput(m_session, outName.c_str());
         MNN::Tensor outputUser(outputTensor, MNN::Tensor::CAFFE);
         outputTensor->copyToHostTensor(&outputUser);
 
-        std::vector<float> outVec(outputUser.host<float>(), outputUser.host<float>() + total);
-        outputs.push_back(std::move(outVec));
-
-        // 打印前10个值
-        // std::cout << "First 10 values: ";
-        // for (int j = 0; j < std::min(10, (int)outVec.size()); ++j) {
-        //     std::cout << outVec[j] << " ";
-        // }
-        // std::cout << "\n" << std::endl;
+        size_t total = 1;
+        for (auto s : outputTensor->shape()) 
+            total *= s;
+        std::vector<float> feat(outputUser.host<float>(), outputUser.host<float>() + total);
+        outputs.push_back(std::move(feat));
     }
 
     return 0;
