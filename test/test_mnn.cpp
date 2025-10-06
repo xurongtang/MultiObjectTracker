@@ -14,8 +14,13 @@ int main(int argc, char* argv[]) {
     std::string modelPath = argv[1];
     std::string imagePath = argv[2];
 
+    // 推理时需进行与训练模型一致的归一化方式
+    // ImageNet 统计值
+    float mean[3] = {0.485f * 255.0f, 0.456f * 255.0f, 0.406f * 255.0f}; // ≈ [123.675, 116.28, 103.53]
+    float std[3]  = {0.229f, 0.224f, 0.225f};
+
     // 2. 创建推理器并加载模型
-    MNNInfer infer(modelPath);
+    MNNInfer infer(modelPath,mean,std);
     if (infer.loadModel() != 0) {
         std::cerr << "Failed to load model: " << modelPath << std::endl;
         return -1;
@@ -48,21 +53,18 @@ int main(int argc, char* argv[]) {
         std::cout << "\n--- Output[" << i << "] ---\n";
         std::cout << "Size: " << outputs[i].size() << " elements\n";
 
-        // 打印前10个值（避免输出太长）
-        int printCount = std::min(10, (int)outputs[i].size());
-        std::cout << "First " << printCount << " values: ";
-        for (int j = 0; j < printCount; ++j) {
-            std::cout << outputs[i][j] << " ";
-        }
+        const auto& [name, shape] = infer.output_shapes[i];
+        std::cout << "Output[" << name << "] shape: ";
+        for (int s : shape) std::cout << s << " ";
         std::cout << "\n";
 
-        // 如果是 ReID 特征（如 128 维），可计算 L2 norm
-        if (outputs[i].size() == 128 || outputs[i].size() == 256 || outputs[i].size() == 512) {
-            float norm = 0.0f;
-            for (float v : outputs[i]) norm += v * v;
-            norm = std::sqrt(norm);
-            std::cout << "L2 Norm: " << norm << " (should be ~1.0 if normalized)\n";
-        }
+        // 打印前10个值（避免输出太长）
+        // int printCount = std::min(10, (int)outputs[i].size());
+        // std::cout << "First " << printCount << " values: ";
+        // for (int j = 0; j < printCount; ++j) {
+        //     std::cout << outputs[i][j] << " ";
+        // }
+        // std::cout << "\n";
     }
 
     return 0;
