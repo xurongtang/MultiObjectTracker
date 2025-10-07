@@ -5,6 +5,10 @@
 
 ---
 
+![Multi-Object Tracking Demo](./test/demo.gif)
+
+---
+
 ## 📌 Overview  
 This project implements a simple yet effective **multi-object tracking (MOT)** system using the **DeepSORT** algorithm. It combines modern object detection with appearance-based re-identification (ReID) to achieve robust tracking across video frames.
 
