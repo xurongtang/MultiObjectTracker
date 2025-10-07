@@ -5,9 +5,7 @@
 
 ---
 
-<video src="./test/output_deepsort.mp4" controls width="640" height="360">
-  您的浏览器不支持视频标签。
-</video>
+[▶️](./test/demo.gif)
 
 ---
 
