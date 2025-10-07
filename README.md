@@ -5,6 +5,12 @@
 
 ---
 
+<video src="./test/output_deepsort.mp4" controls width="640" height="360">
+  您的浏览器不支持视频标签。
+</video>
+
+---
+
 ## 📌 Overview  
 This project implements a simple yet effective **multi-object tracking (MOT)** system using the **DeepSORT** algorithm. It combines modern object detection with appearance-based re-identification (ReID) to achieve robust tracking across video frames.
 
