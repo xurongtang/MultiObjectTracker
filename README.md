@@ -5,7 +5,7 @@
 
 ---
 
-[▶️](./test/demo.gif)
+![Multi-Object Tracking Demo](./test/demo.gif)
 
 ---
 
